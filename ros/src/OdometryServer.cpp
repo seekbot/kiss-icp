@@ -122,6 +122,15 @@ void OdometryServer::initializeParameters(kiss_icp::pipeline::KISSConfig &config
     RCLCPP_INFO(this->get_logger(), "\tInvert odometry transform: %d", invert_odom_tf_);
     publish_debug_clouds_ = declare_parameter<bool>("publish_debug_clouds", publish_debug_clouds_);
     RCLCPP_INFO(this->get_logger(), "\tPublish debug clouds: %d", publish_debug_clouds_);
+    
+    // z-threshold in incoming cloud's frame before registration
+    ground_z_min_ = declare_parameter<double>("ground_z_min", ground_z_min_);
+    RCLCPP_INFO(this->get_logger(), "\tGround z min (cloud frame): %.2f", ground_z_min_);
+    planar_output_ = declare_parameter<bool>("planar_output", planar_output_);
+    RCLCPP_INFO(this->get_logger(), "\tPlanar output (x, y, yaw): %d", planar_output_);
+    require_base_tf_ = declare_parameter<bool>("require_base_tf", require_base_tf_);
+    RCLCPP_INFO(this->get_logger(), "\tRequire base TF before registering: %d", require_base_tf_);
+
     position_covariance_ = declare_parameter<double>("position_covariance", 0.1);
     RCLCPP_INFO(this->get_logger(), "\tPosition covariance: %.2f", position_covariance_);
     orientation_covariance_ = declare_parameter<double>("orientation_covariance", 0.1);

@@ -26,6 +26,7 @@
 #include "kiss_icp/pipeline/KissICP.hpp"
 
 // ROS 2
+#include <limits>
 #include <nav_msgs/msg/odometry.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
@@ -70,6 +71,11 @@ private:
     bool invert_odom_tf_;
     bool publish_odom_tf_;
     bool publish_debug_clouds_;
+
+    /// Ground cut, planar (2D) output, extrinsic guard
+    double ground_z_min_{-std::numeric_limits<double>::infinity()};
+    bool planar_output_{false};
+    bool require_base_tf_{false};
 
     /// Data subscribers.
     rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr pointcloud_sub_;
