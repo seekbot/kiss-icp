@@ -21,6 +21,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 #include <Eigen/Core>
+#include <cmath>
 #include <memory>
 #include <sophus/se3.hpp>
 #include <utility>
@@ -171,8 +172,22 @@ void OdometryServer::initializeParameters(kiss_icp::pipeline::KISSConfig &config
 
 void OdometryServer::RegisterFrame(const sensor_msgs::msg::PointCloud2::ConstSharedPtr &msg) {
     const auto cloud_frame_id = msg->header.frame_id;
-    const auto points = PointCloud2ToEigen(msg);
-    const auto timestamps = GetTimestamps(msg);
+    auto points = PointCloud2ToEigen(msg);
+    auto timestamps = GetTimestamps(msg);
+
+    // Ground cut in cloud frame; timestamp stays idx-aligned for deskew
+    if (std::isfinite(ground_z_min_)) {
+        const bool has_stamps = timestamps.size() == points.size();
+        size_t kept = 0;
+        for (size_t i = 0; i < points.size(); ++i) {
+            if (points[i].z() < ground_z_min_) continue;
+            points[kept] = points[i];
+            if (has_stamps) timestamps[kept] = timestamps[i];
+            ++kept;
+        }
+        points.resize(kept);
+        if (has_stamps) timestamps.resize(kept);
+    }
 
     // Register frame, main entry point to KISS-ICP pipeline
     const auto &[frame, keypoints] = kiss_icp_->RegisterFrame(points, timestamps);
