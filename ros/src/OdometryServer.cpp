@@ -209,11 +209,19 @@ void OdometryServer::PublishOdometry(const Sophus::SE3d &kiss_pose,
     const auto cloud_frame_id = header.frame_id;
     const auto egocentric_estimation = (base_frame_.empty() || base_frame_ == cloud_frame_id);
     const auto moving_frame = egocentric_estimation ? cloud_frame_id : base_frame_;
-    const auto pose = [&]() -> Sophus::SE3d {
+    auto pose = [&]() -> Sophus::SE3d {
         if (egocentric_estimation) return kiss_pose;
         const Sophus::SE3d cloud2base = LookupTransform(base_frame_, cloud_frame_id, tf2_buffer_);
         return cloud2base * kiss_pose * cloud2base.inverse();
     }();
+
+    // Planar output: keep x, y, yaw of base pose (internal estimate stays 6 DoF)
+    if (planar_output_) {
+        const Eigen::Matrix3d R = pose.so3().matrix();
+        const double yaw = std::atan2(R(1, 0), R(0, 0));
+        pose = Sophus::SE3d(Sophus::SO3d::rotZ(yaw),
+                            Eigen::Vector3d(pose.translation().x(), pose.translation().y(), 0.0));
+    }
 
     // Broadcast the tf ---
     if (publish_odom_tf_) {
