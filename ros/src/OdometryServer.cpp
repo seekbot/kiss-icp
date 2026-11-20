@@ -172,6 +172,16 @@ void OdometryServer::initializeParameters(kiss_icp::pipeline::KISSConfig &config
 
 void OdometryServer::RegisterFrame(const sensor_msgs::msg::PointCloud2::ConstSharedPtr &msg) {
     const auto cloud_frame_id = msg->header.frame_id;
+
+    // Guard: Skip scans until base <- cloud TF exists (no identity fallback)
+    if (require_base_tf_ && !base_frame_.empty() && base_frame_ != cloud_frame_id &&
+        !tf2_buffer_->canTransform(base_frame_, cloud_frame_id, tf2::TimePointZero)) {
+        RCLCPP_WARN_THROTTLE(get_logger(), *get_clock(), 2000,
+                            "Waiting for TF %s  <- %s, scan skipped",
+                            base_frame_.c_str(), cloud_frame_id.c_str());
+        return;
+    }
+
     auto points = PointCloud2ToEigen(msg);
     auto timestamps = GetTimestamps(msg);
 
